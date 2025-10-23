@@ -6,36 +6,33 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer // NEW import
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width // NEW import
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions // NEW import
-import androidx.compose.material.icons.Icons // NEW import
-import androidx.compose.material.icons.filled.Delete // NEW import
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon // NEW import
-import androidx.compose.material3.IconButton // NEW import
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment // NEW import
+import androidx.compose.runtime.getValue // NEW import
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardCapitalization // NEW import
-import androidx.compose.ui.text.input.KeyboardType // NEW import
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.simpletodo.ui.theme.SimpleToDoTheme // This should match your theme's package
+import androidx.lifecycle.viewmodel.compose.viewModel // NEW import
+import com.example.simpletodo.ui.theme.SimpleToDoTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,19 +43,21 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    TodoScreen()
+                    // We pass the ViewModel down to our screen
+                    TodoScreen(viewModel = viewModel())
                 }
             }
         }
     }
 }
 
+// --- TodoScreen is now much simpler! ---
 @Composable
-fun TodoScreen() {
-    val todoList = remember {
-        mutableStateListOf("Buy milk", "Walk the dog", "Learn Compose")
-    }
-    var text by remember { mutableStateOf("") }
+fun TodoScreen(viewModel: TodoViewModel) { // It receives the ViewModel
+
+    // Get the current text from the ViewModel.
+    // 'by' is a delegate that unwraps the .value for us.
+    val text by viewModel.todoText
 
     Column(
         modifier = Modifier
@@ -68,14 +67,13 @@ fun TodoScreen() {
         LazyColumn(
             modifier = Modifier.weight(1f)
         ) {
-            // 'items' is a bit different now, we pass the list and a key
-            // The key helps Compose efficiently update the list
-            items(items = todoList, key = { it }) { task ->
+            // We get the list directly from the ViewModel
+            items(items = viewModel.todoList, key = { it }) { task ->
                 TodoItem(
                     taskName = task,
                     onDelete = {
-                        // This is the logic that runs when a delete button is clicked
-                        todoList.remove(task)
+                        // We call the ViewModel's function
+                        viewModel.removeTask(task)
                     }
                 )
             }
@@ -88,27 +86,21 @@ fun TodoScreen() {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             OutlinedTextField(
+                // Read the value from our 'text' variable
                 value = text,
-                onValueChange = { newText -> text = newText },
+                // Call the ViewModel function when the text changes
+                onValueChange = { viewModel.onTodoTextChange(it) },
                 label = { Text("New Task") },
                 modifier = Modifier.weight(1f),
-                // --- NEW KEYBOARD OPTIONS ---
                 keyboardOptions = KeyboardOptions(
-                    // Automatically capitalize the first letter of a sentence
                     capitalization = KeyboardCapitalization.Sentences,
-                    // Tell the keyboard this is plain text
                     keyboardType = KeyboardType.Text
                 )
-                // --- END OF NEW OPTIONS ---
             )
 
             Button(
-                onClick = {
-                    if (text.isNotBlank()) {
-                        todoList.add(text)
-                        text = ""
-                    }
-                },
+                // Call the ViewModel function on click
+                onClick = { viewModel.addTask() },
                 modifier = Modifier.padding(start = 8.dp)
             ) {
                 Text("Add")
@@ -117,39 +109,37 @@ fun TodoScreen() {
     }
 }
 
-// --- UPDATED TODO ITEM COMPOSABLE ---
 @Composable
-fun TodoItem(taskName: String, onDelete: () -> Unit) { // Now takes an 'onDelete' function
+fun TodoItem(taskName: String, onDelete: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically // Aligns text and icon nicely
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Task text
         Text(
             text = taskName,
-            modifier = Modifier.weight(1f) // Text takes up most of the space
+            modifier = Modifier.weight(1f)
         )
-
-        Spacer(modifier = Modifier.width(8.dp)) // A little space
-
-        // Delete button
-        IconButton(onClick = onDelete) { // Calls the onDelete function when clicked
+        Spacer(modifier = Modifier.width(8.dp))
+        IconButton(onClick = onDelete) {
             Icon(
-                imageVector = Icons.Default.Delete, // The standard delete icon
-                contentDescription = "Delete Task" // For accessibility
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Delete Task"
             )
         }
     }
 }
-// --- END OF UPDATED COMPOSABLE ---
 
 
 @Preview(showBackground = true)
 @Composable
 fun TodoScreenPreview() {
     SimpleToDoTheme {
-        TodoScreen()
+        // We can't use a real ViewModel in a Preview,
+        // so we'll have to adjust this later if we want the preview to work.
+        // For now, it will be blank, but the app itself will run.
+        // We could create a "fake" ViewModel for the preview if we wanted.
+        Text("Preview may not work with ViewModel")
     }
 }
