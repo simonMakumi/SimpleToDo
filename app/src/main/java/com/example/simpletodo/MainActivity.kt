@@ -138,7 +138,6 @@ fun TodoScreenPreview() {
     SimpleToDoTheme {
         // We can't use a real ViewModel in a Preview,
         // so we'll have to adjust this later if we want the preview to work.
-        // For now, it will be blank, but the app itself will run.
         // We could create a "fake" ViewModel for the preview if we wanted.
         Text("Preview may not work with ViewModel")
     }
