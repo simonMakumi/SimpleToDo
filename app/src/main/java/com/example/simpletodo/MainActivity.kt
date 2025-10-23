@@ -6,23 +6,33 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer // NEW import
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width // NEW import
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions // NEW import
+import androidx.compose.material.icons.Icons // NEW import
+import androidx.compose.material.icons.filled.Delete // NEW import
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon // NEW import
+import androidx.compose.material3.IconButton // NEW import
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue // NEW import
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf // NEW import
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue // NEW import
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment // NEW import
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardCapitalization // NEW import
+import androidx.compose.ui.text.input.KeyboardType // NEW import
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.simpletodo.ui.theme.SimpleToDoTheme // This should match your theme's package
@@ -48,12 +58,7 @@ fun TodoScreen() {
     val todoList = remember {
         mutableStateListOf("Buy milk", "Walk the dog", "Learn Compose")
     }
-
-    // --- NEW STATE FOR THE TEXT FIELD ---
-    // We use 'mutableStateOf' for a single value (like a String)
-    // 'text' holds the current value, and 'setText' is the function to change it.
     var text by remember { mutableStateOf("") }
-    // --- END OF NEW STATE ---
 
     Column(
         modifier = Modifier
@@ -61,58 +66,85 @@ fun TodoScreen() {
             .padding(16.dp)
     ) {
         LazyColumn(
-            // The 'weight' modifier makes the LazyColumn fill all available space,
-            // pushing the Row (which we'll add) to the bottom.
             modifier = Modifier.weight(1f)
         ) {
-            items(todoList) { task ->
-                TodoItem(taskName = task)
+            // 'items' is a bit different now, we pass the list and a key
+            // The key helps Compose efficiently update the list
+            items(items = todoList, key = { it }) { task ->
+                TodoItem(
+                    taskName = task,
+                    onDelete = {
+                        // This is the logic that runs when a delete button is clicked
+                        todoList.remove(task)
+                    }
+                )
             }
         }
 
-        // --- NEW UI: INPUT FIELD AND BUTTON ---
-        // A Row arranges its children horizontally
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 16.dp), // Add some space above the input row
-            horizontalArrangement = Arrangement.SpaceBetween // Spreads children out
+                .padding(top = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // This is the text input field
             OutlinedTextField(
-                value = text, // The text to display
-                onValueChange = { newText -> text = newText }, // How to update the text state
-                label = { Text("New Task") }, // A placeholder label
-                modifier = Modifier.weight(1f) // Make the text field take up most of the space
+                value = text,
+                onValueChange = { newText -> text = newText },
+                label = { Text("New Task") },
+                modifier = Modifier.weight(1f),
+                // --- NEW KEYBOARD OPTIONS ---
+                keyboardOptions = KeyboardOptions(
+                    // Automatically capitalize the first letter of a sentence
+                    capitalization = KeyboardCapitalization.Sentences,
+                    // Tell the keyboard this is plain text
+                    keyboardType = KeyboardType.Text
+                )
+                // --- END OF NEW OPTIONS ---
             )
 
-            // This is the button
             Button(
                 onClick = {
-                    // This is the logic that runs when the button is clicked
-                    if (text.isNotBlank()) { // Only add if the text isn't empty
-                        todoList.add(text) // Add the new task to our list
-                        text = "" // Clear the text field
+                    if (text.isNotBlank()) {
+                        todoList.add(text)
+                        text = ""
                     }
                 },
-                modifier = Modifier.padding(start = 8.dp) // Space between text field and button
+                modifier = Modifier.padding(start = 8.dp)
             ) {
                 Text("Add")
             }
         }
-        // --- END OF NEW UI ---
     }
 }
 
+// --- UPDATED TODO ITEM COMPOSABLE ---
 @Composable
-fun TodoItem(taskName: String) {
-    Text(
-        text = taskName,
+fun TodoItem(taskName: String, onDelete: () -> Unit) { // Now takes an 'onDelete' function
+    Row(
         modifier = Modifier
-            .padding(vertical = 8.dp)
-            .fillMaxWidth() // Make each item take the full width
-    )
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically // Aligns text and icon nicely
+    ) {
+        // Task text
+        Text(
+            text = taskName,
+            modifier = Modifier.weight(1f) // Text takes up most of the space
+        )
+
+        Spacer(modifier = Modifier.width(8.dp)) // A little space
+
+        // Delete button
+        IconButton(onClick = onDelete) { // Calls the onDelete function when clicked
+            Icon(
+                imageVector = Icons.Default.Delete, // The standard delete icon
+                contentDescription = "Delete Task" // For accessibility
+            )
+        }
+    }
 }
+// --- END OF UPDATED COMPOSABLE ---
+
 
 @Preview(showBackground = true)
 @Composable
