@@ -58,4 +58,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     // ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
+    // For saving data (JSON serialization)
+    implementation("com.google.code.gson:gson:2.10.1")
 }
