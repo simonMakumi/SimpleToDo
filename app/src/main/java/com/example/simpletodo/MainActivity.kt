@@ -17,21 +17,24 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox // NEW import
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme // NEW import
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue // NEW import
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color // NEW import
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextDecoration // NEW import
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel // NEW import
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.simpletodo.ui.theme.SimpleToDoTheme
 
 class MainActivity : ComponentActivity() {
@@ -43,7 +46,6 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // We pass the ViewModel down to our screen
                     TodoScreen(viewModel = viewModel())
                 }
             }
@@ -51,12 +53,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// --- TodoScreen is now much simpler! ---
 @Composable
-fun TodoScreen(viewModel: TodoViewModel) { // It receives the ViewModel
-
-    // Get the current text from the ViewModel.
-    // 'by' is a delegate that unwraps the .value for us.
+fun TodoScreen(viewModel: TodoViewModel) {
     val text by viewModel.todoText
 
     Column(
@@ -67,13 +65,18 @@ fun TodoScreen(viewModel: TodoViewModel) { // It receives the ViewModel
         LazyColumn(
             modifier = Modifier.weight(1f)
         ) {
-            // We get the list directly from the ViewModel
-            items(items = viewModel.todoList, key = { it }) { task ->
+            // 1. CHANGE: The key is now the item's ID
+            items(items = viewModel.todoList, key = { it.id }) { task ->
                 TodoItem(
-                    taskName = task,
+                    // 2. CHANGE: Pass the whole item
+                    item = task,
                     onDelete = {
-                        // We call the ViewModel's function
+                        // 3. CHANGE: Pass the item to remove
                         viewModel.removeTask(task)
+                    },
+                    // 4. NEW: Add the check change handler
+                    onCheckedChange = {
+                        viewModel.toggleDoneStatus(task)
                     }
                 )
             }
@@ -86,9 +89,7 @@ fun TodoScreen(viewModel: TodoViewModel) { // It receives the ViewModel
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             OutlinedTextField(
-                // Read the value from our 'text' variable
                 value = text,
-                // Call the ViewModel function when the text changes
                 onValueChange = { viewModel.onTodoTextChange(it) },
                 label = { Text("New Task") },
                 modifier = Modifier.weight(1f),
@@ -99,7 +100,6 @@ fun TodoScreen(viewModel: TodoViewModel) { // It receives the ViewModel
             )
 
             Button(
-                // Call the ViewModel function on click
                 onClick = { viewModel.addTask() },
                 modifier = Modifier.padding(start = 8.dp)
             ) {
@@ -109,19 +109,37 @@ fun TodoScreen(viewModel: TodoViewModel) { // It receives the ViewModel
     }
 }
 
+// --- UPDATED TODO ITEM COMPOSABLE ---
 @Composable
-fun TodoItem(taskName: String, onDelete: () -> Unit) {
+fun TodoItem(
+    item: TodoItem, // 5. CHANGE: Receive the full item
+    onDelete: () -> Unit,
+    onCheckedChange: () -> Unit // 6. NEW: Receive the check handler
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 4.dp), // A little less padding
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // 7. NEW: The Checkbox
+        Checkbox(
+            checked = item.isDone,
+            onCheckedChange = { onCheckedChange() } // Call the handler
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // 8. NEW: Strikethrough and color change
         Text(
-            text = taskName,
+            text = item.taskName,
+            textDecoration = if (item.isDone) TextDecoration.LineThrough else TextDecoration.None,
+            color = if (item.isDone) Color.Gray else MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
         )
+
         Spacer(modifier = Modifier.width(8.dp))
+
         IconButton(onClick = onDelete) {
             Icon(
                 imageVector = Icons.Default.Delete,
@@ -130,15 +148,14 @@ fun TodoItem(taskName: String, onDelete: () -> Unit) {
         }
     }
 }
+// --- END OF UPDATED COMPOSABLE ---
 
 
 @Preview(showBackground = true)
 @Composable
 fun TodoScreenPreview() {
     SimpleToDoTheme {
-        // We can't use a real ViewModel in a Preview,
-        // so we'll have to adjust this later if we want the preview to work.
-        // We could create a "fake" ViewModel for the preview if we wanted.
+        // Preview won't work easily with the ViewModel
         Text("Preview may not work with ViewModel")
     }
 }
