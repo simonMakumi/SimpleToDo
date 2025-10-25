@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -19,12 +20,9 @@ class TodoViewModel(app: Application) : AndroidViewModel(app) {
     val todoList = mutableStateListOf<TodoItem>()
     val todoText = mutableStateOf("")
 
-    // --- NEW EDITING STATE ---
-    // Holds the ID of the item currently being edited. 'null' means nothing is being edited.
+    // --- EDITING STATE ---
     val currentlyEditingId = mutableStateOf<Long?>(null)
-    // Holds the text for the item being edited.
     val currentlyEditingText = mutableStateOf("")
-    // --- END OF NEW STATE ---
 
     private val sharedPreferences = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val gson = Gson()
@@ -68,40 +66,31 @@ class TodoViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // --- NEW EDITING FUNCTIONS ---
+    // --- EDITING FUNCTIONS ---
 
-    // Called when the user clicks on the text of a task
     fun onStartEdit(item: TodoItem) {
         currentlyEditingId.value = item.id
         currentlyEditingText.value = item.taskName
     }
 
-    // Called as the user types in the edit text field
     fun onEditTextChanged(newText: String) {
         currentlyEditingText.value = newText
     }
 
-    // Called when the user presses "Done" on the keyboard
     fun onSaveEdit() {
         val idToSave = currentlyEditingId.value ?: return
         val newText = currentlyEditingText.value
 
-        // Find the index of the item we are editing
         val index = todoList.indexOfFirst { it.id == idToSave }
         if (index != -1 && newText.isNotBlank()) {
-            // Create a copy with the updated text
             val updatedItem = todoList[index].copy(taskName = newText)
-            // Replace the old item with the new one
             todoList[index] = updatedItem
             saveTasks()
         }
 
-        // Reset the editing state
         currentlyEditingId.value = null
         currentlyEditingText.value = ""
     }
-    // --- END OF NEW FUNCTIONS ---
-
 
     // --- PRIVATE HELPER FUNCTIONS ---
 
@@ -126,8 +115,9 @@ class TodoViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun saveTasks() {
         val tasksJson = gson.toJson(todoList)
-        sharedPreferences.edit()
-            .putString(TASKS_KEY, tasksJson)
-            .apply()
+        // Use the KTX 'edit' function
+        sharedPreferences.edit {
+            putString(TASKS_KEY, tasksJson)
+        }
     }
 }
