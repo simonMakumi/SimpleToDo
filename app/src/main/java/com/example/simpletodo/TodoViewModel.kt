@@ -8,7 +8,6 @@ import androidx.lifecycle.AndroidViewModel
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
-// 1. CHANGE: We now use TodoItem, not String
 class TodoViewModel(app: Application) : AndroidViewModel(app) {
 
     companion object {
@@ -17,14 +16,19 @@ class TodoViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // --- STATE ---
-    // 2. CHANGE: The list is now of type TodoItem
     val todoList = mutableStateListOf<TodoItem>()
     val todoText = mutableStateOf("")
+
+    // --- NEW EDITING STATE ---
+    // Holds the ID of the item currently being edited. 'null' means nothing is being edited.
+    val currentlyEditingId = mutableStateOf<Long?>(null)
+    // Holds the text for the item being edited.
+    val currentlyEditingText = mutableStateOf("")
+    // --- END OF NEW STATE ---
 
     private val sharedPreferences = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val gson = Gson()
 
-    // 3. NEW: A counter to create unique IDs
     private var lastId = 0L
 
     init {
@@ -39,8 +43,7 @@ class TodoViewModel(app: Application) : AndroidViewModel(app) {
     fun addTask() {
         val text = todoText.value
         if (text.isNotBlank()) {
-            // 4. CHANGE: Create a full TodoItem object
-            lastId++ // Increment the ID
+            lastId++
             val newItem = TodoItem(
                 id = lastId,
                 taskName = text
@@ -51,52 +54,77 @@ class TodoViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // 5. CHANGE: We pass the whole item to remove
     fun removeTask(item: TodoItem) {
         todoList.remove(item)
         saveTasks()
     }
 
-    // 6. NEW: This function handles toggling the 'isDone' state
     fun toggleDoneStatus(item: TodoItem) {
-        // Find the item in the list
         val index = todoList.indexOf(item)
         if (index != -1) {
-            // Create a *copy* of the item with the 'isDone' status flipped
             val updatedItem = item.copy(isDone = !item.isDone)
-            // Replace the old item with the new one to trigger a UI update
             todoList[index] = updatedItem
             saveTasks()
         }
     }
+
+    // --- NEW EDITING FUNCTIONS ---
+
+    // Called when the user clicks on the text of a task
+    fun onStartEdit(item: TodoItem) {
+        currentlyEditingId.value = item.id
+        currentlyEditingText.value = item.taskName
+    }
+
+    // Called as the user types in the edit text field
+    fun onEditTextChanged(newText: String) {
+        currentlyEditingText.value = newText
+    }
+
+    // Called when the user presses "Done" on the keyboard
+    fun onSaveEdit() {
+        val idToSave = currentlyEditingId.value ?: return
+        val newText = currentlyEditingText.value
+
+        // Find the index of the item we are editing
+        val index = todoList.indexOfFirst { it.id == idToSave }
+        if (index != -1 && newText.isNotBlank()) {
+            // Create a copy with the updated text
+            val updatedItem = todoList[index].copy(taskName = newText)
+            // Replace the old item with the new one
+            todoList[index] = updatedItem
+            saveTasks()
+        }
+
+        // Reset the editing state
+        currentlyEditingId.value = null
+        currentlyEditingText.value = ""
+    }
+    // --- END OF NEW FUNCTIONS ---
+
 
     // --- PRIVATE HELPER FUNCTIONS ---
 
     private fun loadTasks() {
         val tasksJson = sharedPreferences.getString(TASKS_KEY, null)
         if (tasksJson != null) {
-            // 7. CHANGE: We now load a List<TodoItem>
             val type = object : TypeToken<List<TodoItem>>() {}.type
             val loadedTasks: List<TodoItem> = gson.fromJson(tasksJson, type)
             todoList.clear()
             todoList.addAll(loadedTasks)
-
-            // 8. NEW: Update our ID counter to be higher than any loaded ID
             lastId = loadedTasks.maxOfOrNull { it.id } ?: 0L
         } else {
-            // Add some default data if the list is empty
             val defaultTasks = listOf(
                 TodoItem(id = 1L, taskName = "Buy milk", isDone = true),
                 TodoItem(id = 2L, taskName = "Walk the dog"),
                 TodoItem(id = 3L, taskName = "Learn ViewModels")
             )
             todoList.addAll(defaultTasks)
-            lastId = 3L // Set the ID counter
+            lastId = 3L
         }
     }
 
     private fun saveTasks() {
-        // 9. CHANGE: This works exactly the same, but now saves the list of objects
         val tasksJson = gson.toJson(todoList)
         sharedPreferences.edit()
             .putString(TASKS_KEY, tasksJson)
